@@ -1,0 +1,41 @@
+# vim: set sts=2 ts=8 sw=2 tw=99 et ft=python:  
+import os  
+  
+project = builder.LibraryProject('dbi.supabase.ext')  
+project.sources += [  
+  '../../public/smsdk_ext.cpp',  
+  'supabase.cpp',  
+]  
+  
+for sdk_name in SM.sdks:  
+  sdk = SM.sdks[sdk_name]  
+  if sdk['name'] in ['mock']:  
+    continue  
+  
+  for cxx in builder.targets:  
+    if not cxx.target.arch in sdk['platforms'][cxx.target.platform]:  
+      continue  
+  
+    binary = SM.HL2ExtConfig(project, builder, cxx, 'dbi.supabase.ext.' + sdk['extension'], sdk)  
+      
+    # Add the correct curl include path for your system  
+    if binary.compiler.target.platform == 'linux':  
+      binary.compiler.cxxincludes += [  
+        '/usr/include/x86_64-linux-gnu/curl',  # This is where your curl.h is located  
+        '/usr/include/x86_64-linux-gnu',  
+        '/usr/include'  
+      ]  
+      binary.compiler.postlink += ['-lcurl', '-lpthread']  
+    elif binary.compiler.target.platform == 'windows':  
+      binary.compiler.postlink += ['libcurl.lib', 'ws2_32.lib']  
+  
+    # PostgreSQL library configuration    
+    if binary.compiler.target.platform == 'linux':  
+      binary.compiler.postlink += ['-lpq']  
+      binary.compiler.cxxincludes += ['/usr/include/postgresql']  
+    elif binary.compiler.target.platform == 'windows':  
+      binary.compiler.postlink += ['libpq.lib', 'secur32.lib']  
+      binary.compiler.cxxincludes += ['C:\\Program Files\\PostgreSQL\\include']  
+      binary.compiler.linkflags += ['/LIBPATH:C:\\Program Files\\PostgreSQL\\lib']  
+  
+SM.extensions += builder.Add(project)
